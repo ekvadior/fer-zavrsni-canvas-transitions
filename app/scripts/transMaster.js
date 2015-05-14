@@ -1,17 +1,11 @@
-/* global html2canvas, $, _, moment */
+/* global html2canvas, $, _ */
 'use strict';
 
 var $b = $('body');
 var w = window;
 
-var CONST = {
-  TRANSITIONS: {
-    BOX: 1
-  }
-};
-
 var DEFAULTS = {
-  transitionType: CONST.TRANSITIONS.BOX,
+  transitionType: 'box-transition',
   pages: [
     {
       current: true,
@@ -45,12 +39,15 @@ TransMaster.prototype._renderPageToCanvas = function(pageEl, onComplete) {
 
   var $tempCont = $('<div class="trans-temp-container"></div>');
   $tempCont.html($page.clone().get(0));
+  $tempCont.css('background', self._options.background);
   $tempCont.children().show();
 
   $b.append($tempCont);
 
   html2canvas($tempCont.get(0), {
     logging: self._options.debug,
+    width: w.innerWidth,
+    height: w.innerHeight,
     onrendered: function(canvas) {
       onComplete.call(self, canvas);
       $tempCont.remove();
@@ -60,23 +57,26 @@ TransMaster.prototype._renderPageToCanvas = function(pageEl, onComplete) {
 
 TransMaster.prototype._init = function(options) {
   var o = options;
+
   this.$pc = $(o.pageContainer);
   this._options = o;
   this._prepareDOM();
   this._generatePages();
-  this._initTranistions();
+  this._initTransitions();
 };
 
 TransMaster.prototype._prepareDOM = function() {
   var self = this;
   $b.addClass('trans-body');
+
   this.$overlay = $('<div class="trans-overlay"></div>');
   this.$overlay.css('background', this._options.background);
   $b.append(this.$overlay);
 
   _.each(this._options.pages, function(page) {
     page.el = $(page.container);
-    if(page.current) {
+
+    if (page.current) {
       self._currentPage = page;
       $(self._currentPage.el).show();
     } else {
@@ -85,12 +85,10 @@ TransMaster.prototype._prepareDOM = function() {
   });
 };
 
-TransMaster.prototype._initTranistions = function() {
-  var self = this;
+
+TransMaster.prototype._initTransitions = function() {
   this._transitions = {};
-  this._transitions[CONST.TRANSITIONS.BOX] = function(cur, next, callback) {
-    callback.call(self, 'Transition went ok.');
-  };
+  this._transitionTemp = {};
 };
 
 TransMaster.prototype._generatePages = function() {
@@ -99,7 +97,7 @@ TransMaster.prototype._generatePages = function() {
   _.each(pages, function(page) {
     self._renderPageToCanvas(page.el, function(canvas) {
       page.canvas = canvas;
-      page.image = canvas.toDataURL();
+      page.image = canvas.toDataURL('image/jpeg', 1.0);
     });
   });
 };
@@ -107,28 +105,39 @@ TransMaster.prototype._generatePages = function() {
 TransMaster.prototype._transition = function(transType, currentPage, nextPage) {
   var self = this;
   var time = Date.now();
-  this._transitions[transType].call(this, currentPage, nextPage, function(status) {
-    if(self._options.debug) {
+
+  //Set up transition options
+  self._transitionTemp = {
+    o: self._transitions[transType].options
+  };
+
+  self._transitions[transType].beforeTransition.call(self, currentPage, nextPage, function(status) {
+    if (self._options.debug) {
       console.log(status);
       console.log('Elapsed time: ' + ((Date.now() - time) ) + 'ms');
     }
+    time = Date.now();
     self._removePage(currentPage);
-    self._putPage(nextPage);
-    self._currentPage = nextPage;
+
+    self._transitions[transType].doTransition.call(self, currentPage, nextPage, function(status) {
+      if (self._options.debug) {
+        console.log(status);
+        console.log('Elapsed time: ' + ((Date.now() - time) ) + 'ms');
+      }
+      time = Date.now();
+
+      self._transitions[transType].afterTransition.call(self, currentPage, nextPage, function(status) {
+        if (self._options.debug) {
+          console.log(status);
+          console.log('Elapsed time: ' + ((Date.now() - time) ) + 'ms');
+        }
+
+        self._putPage(nextPage);
+        self._currentPage = nextPage;
+      });
+    });
   });
 };
-
-TransMaster.prototype.goToPage = function(pageName) {
-  var self = this;
-  if(this._currentPage.canvas && this._getPage(pageName).canvas) {
-    this._transition(this._options.transitionType, this._currentPage, this._getPage(pageName));
-  } else {
-    setTimeout(function() {
-      self.goToPage(pageName);
-    }, self._options.renderTimeout);
-  }
-};
-
 
 TransMaster.prototype._removePage = function(page) {
   this.$pc.find(page.container).remove();
@@ -136,16 +145,27 @@ TransMaster.prototype._removePage = function(page) {
 
 TransMaster.prototype._putPage = function(page) {
   this.$pc.append(page.el);
+
   $(w).scrollTop(0);
   $(page.el).show();
 };
 
-//###### DEVELOPMENT CODE #######
-window.tm = new TransMaster({
-  debug: true
-});
+TransMaster.prototype.includeTransition = function(transition, options) {
+  this._transitions[transition.name] = {
+    options: _.extend(transition.options, options),
+    beforeTransition: transition.beforeTransition,
+    doTransition: transition.doTransition,
+    afterTransition: transition.afterTransition
+  };
+};
 
-window.showCanvas = function() {
-  document.body.appendChild(window.tm._options.pages[0].canvas);
-  document.body.appendChild(window.tm._options.pages[1].canvas);
+TransMaster.prototype.goToPage = function(pageName) {
+  var self = this;
+  if (this._currentPage.canvas && this._getPage(pageName).canvas) {
+    this._transition(this._options.transitionType, this._currentPage, this._getPage(pageName));
+  } else {
+    setTimeout(function() {
+      self.goToPage(pageName);
+    }, self._options.renderTimeout);
+  }
 };
