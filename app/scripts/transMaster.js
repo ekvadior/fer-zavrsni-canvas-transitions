@@ -1,4 +1,4 @@
-/* global html2canvas, $, _ */
+/* global html2canvas, $, _, dat */
 'use strict';
 
 var $b = $('body');
@@ -57,6 +57,12 @@ TransMaster.prototype._renderPageToCanvas = function(pageEl, onComplete) {
 
 TransMaster.prototype._init = function(options) {
   var o = options;
+
+  if (o.debug) {
+    this.gui = new dat.GUI();
+
+    this.gui.add(o, 'transitionType');
+  }
 
   this.$pc = $(o.pageContainer);
   this._options = o;
@@ -151,8 +157,20 @@ TransMaster.prototype._putPage = function(page) {
 };
 
 TransMaster.prototype.includeTransition = function(transition, options) {
+  var transOptions = _.extend(transition.options, options);
+
+  if (this._options.debug) {
+    var g = this.gui;
+
+    var f = g.addFolder(transition.name);
+
+    _.each(transOptions, function(v, k) {
+      f.add(transOptions, k);
+    });
+  }
+
   this._transitions[transition.name] = {
-    options: _.extend(transition.options, options),
+    options: transOptions,
     beforeTransition: transition.beforeTransition,
     doTransition: transition.doTransition,
     afterTransition: transition.afterTransition

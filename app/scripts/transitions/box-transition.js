@@ -10,6 +10,8 @@ var boxTransitionDefaults = {
   clearFaceColor: 0xffffff,
   cameraDistanceMultiplier: 2,
   allowRotationZ: false,
+  zoomOutTime: 1000,
+  zoomInTime: 1000
 };
 
 var boxTransition = {
@@ -64,7 +66,7 @@ var boxTransition = {
     var middle = { cameraZ: t.cameraPos * t.o.cameraDistanceMultiplier, boxRotationY: Math.PI * (3/4), boxRotationZ: 2 * Math.PI };
     var end = { cameraZ: t.cameraPos, boxRotationY: Math.PI * (3/2), boxRotationZ: 4 * Math.PI };
 
-    t.tween1 = new TWEEN.Tween(begin).to(middle, 1000);
+    t.tween1 = new TWEEN.Tween(begin).to(middle, t.o.zoomOutTime);
     t.tween1.onUpdate(function(){
       t.camera.position.z = begin.cameraZ;
       t.box.rotation.y = begin.boxRotationY;
@@ -72,7 +74,7 @@ var boxTransition = {
         t.box.rotation.z = begin.boxRotationZ;
       }
     });
-    t.tween2 = new TWEEN.Tween(middle).to(end, 1000);
+    t.tween2 = new TWEEN.Tween(middle).to(end, t.o.zoomInTime);
     t.tween2.onUpdate(function() {
       t.camera.position.z = middle.cameraZ;
       t.box.rotation.y = middle.boxRotationY;

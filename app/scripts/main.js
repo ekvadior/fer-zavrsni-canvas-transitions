@@ -24,6 +24,8 @@ TM.includeTransition(boxTransition, {
   cameraDistanceMultiplier: 3
 });
 
+TM.includeTransition(planeWobbleTransition, {});
+
 $('body').on('click', '.js-change-page', function() {
   var $this = $(this);
   TM.goToPage($this.data('page'));
