@@ -7,7 +7,7 @@ var w = window;
 
 function TransController() {
   this.transitions = [];
-  this.transtionMaps = [];
+  this.transitionMaps = [];
 }
 _.extend(TransController.prototype, {
   registerTransition: function(transition) {
@@ -18,8 +18,8 @@ _.extend(TransController.prototype, {
     return this.transitions;
   },
 
-  registerTransitionMap: function(transtionMap) {
-    this.transitionMaps.push(transtionMap);
+  registerTransitionMap: function(transitionMap) {
+    this.transitionMaps.push(transitionMap);
   },
 
   _getTransitionMaps: function() {
@@ -33,6 +33,7 @@ window.TC = new TransController();
 
 var DEFAULTS = {
   transitionType: 'box-transition',
+  transitionMapType: 'box-transition-map',
   pages: [
     {
       current: true,
@@ -95,7 +96,21 @@ _.extend(TransMaster.prototype, {
     this._prepareDOM();
     this._generatePages();
     this._initTransitions();
+
+    if (o.debug) {
+      this._debugNextPage = 'third';
+      this.gui.add(this, '_debugNextPage', _.map(o.pages, function(p) {return p.name; }));
+      this.gui.add(this, '_debugGoToNextPage');
+
+      this.gui.add(this, 'openMap');
+    }
   },
+
+  //DEBUG FUNCTION!!!
+  _debugGoToNextPage: function() {
+    this.goToPage(this._debugNextPage);
+  },
+
 
   _prepareDOM: function() {
     var self = this;
@@ -120,14 +135,21 @@ _.extend(TransMaster.prototype, {
   _initTransitions: function() {
     var self = this;
     this._transitions = {};
+    this._transitionMaps = {};
     this._transitionTemp = {};
+    this._transitionMapTemp = {};
 
     _.each(TC._getTransitions(), function(t) {
       self.includeTransition(t);
     });
 
+    _.each(TC._getTransitionMaps(), function(t) {
+      self.includeTransitionMap(t);
+    });
+
     if (this._options.debug) {
       this.gui.add(this._options, 'transitionType', _.keys(this._transitions));
+      this.gui.add(this._options, 'transitionMapType', _.keys(this._transitionMaps));
     }
   },
 
@@ -179,6 +201,44 @@ _.extend(TransMaster.prototype, {
     });
   },
 
+  _transitionMap: function(transMapType, currentPage, pages) {
+    var self = this;
+    var time = Date.now();
+
+    //Set up transition options
+    self._transitionMapTemp = {
+      o: self._transitionMaps[transMapType].options
+    };
+
+    self._transitionMaps[transMapType].beforeTransitionMap.call(self, currentPage, pages, function(status) {
+      if (self._options.debug) {
+        console.log(status);
+        console.log('Elapsed time: ' + ((Date.now() - time) ) + 'ms');
+      }
+      time = Date.now();
+      self._removePage(currentPage);
+
+      self._transitionMaps[transMapType].doTransitionMap.call(self, currentPage, pages, function(status) {
+        if (self._options.debug) {
+          console.log(status);
+          console.log('Elapsed time: ' + ((Date.now() - time) ) + 'ms');
+        }
+        time = Date.now();
+
+        self._transitionMaps[transMapType].afterTransitionMap.call(self, currentPage, pages, function(status, nextPage) {
+          if (self._options.debug) {
+            console.log(status);
+            console.log('Elapsed time: ' + ((Date.now() - time) ) + 'ms');
+          }
+
+          nextPage = self._getPage(nextPage);
+          self._putPage(nextPage);
+          self._currentPage = nextPage;
+        });
+      });
+    });
+  },
+
   _removePage: function(page) {
     this.$pc.find(page.container).remove();
   },
@@ -190,8 +250,16 @@ _.extend(TransMaster.prototype, {
     $(page.el).show();
   },
 
-  chooseTransition: function(transitionName) {
+  chooseTransition: function(transitionName, options) {
     this.o.transitionType = transitionName;
+
+    if (options) {
+      this.setTransitionOptions(transitionName, options);
+    }
+  },
+
+  setTransitionOptions: function(transitionName, options) {
+    this._transitions[transitionName].options = _.extend(this._transitions[transitionName].options, options);
   },
 
   includeTransition: function(transition, options) {
@@ -215,16 +283,34 @@ _.extend(TransMaster.prototype, {
     };
   },
 
-  goToPage: function(pageName) {
-    var self = this;
-    if (this._currentPage.canvas && this._getPage(pageName).canvas) {
-      var transType = this._currentPage.transition ? this._currentPage.transition : this._options.transitionType;
-      this._transition(transType, this._currentPage, this._getPage(pageName));
-    } else {
-      setTimeout(function() {
-        self.goToPage(pageName);
-      }, self._options.renderTimeout);
+  includeTransitionMap: function(transitionMap, options) {
+    var transOptions = _.extend(transitionMap.options, options);
+
+    if (this._options.debug) {
+      var g = this.gui;
+
+      var f = g.addFolder(transitionMap.name);
+
+      _.each(transOptions, function(v, k) {
+        f.add(transOptions, k);
+      });
     }
+
+    this._transitionMaps[transitionMap.name] = {
+      options: transOptions,
+      beforeTransitionMap: transitionMap.beforeTransitionMap,
+      doTransitionMap: transitionMap.doTransitionMap,
+      afterTransitionMap: transitionMap.afterTransitionMap
+    };
   },
+
+  goToPage: function(pageName) {
+    var transType = this._currentPage.transition ? this._currentPage.transition : this._options.transitionType;
+    this._transition(transType, this._currentPage, this._getPage(pageName));
+  },
+
+  openMap: function() {
+    this._transitionMap(this._options.transitionMapType, this._currentPage, this._options.pages);
+  }
 
 });
