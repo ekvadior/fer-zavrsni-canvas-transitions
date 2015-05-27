@@ -30,4 +30,8 @@ $('body').on('click', '.js-change-page', function() {
   TM.goToPage($this.data('page'));
 });
 
+$('body').on('click', '.js-map', function() {
+  TM.openMap();
+});
+
 window.tm = TM;
