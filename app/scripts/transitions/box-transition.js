@@ -1,4 +1,4 @@
-/* global THREE, TWEEN */
+/* global THREE, TWEEN, TC */
 'use strict';
 
 var $b = $('body');
@@ -130,4 +130,6 @@ var boxTransition = {
     callback('After transition - ok.');
   }
 };
+
+TC.registerTransition(boxTransition);
 

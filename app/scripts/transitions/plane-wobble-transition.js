@@ -1,4 +1,4 @@
-/* global _, THREE, TWEEN */
+/* global _, THREE, TWEEN, TC */
 'use strict';
 
 var $b = $('body');
@@ -92,7 +92,7 @@ var planeWobbleTransition = {
       TWEEN.update();
 
       _.each(t.planeCur.geometry.vertices, function(v, i) {
-        v.z = t.planeCur.position.z + (Math.sin(time/1000 + i % t.o.segments)/2 + 1) * t.begin.curMult * t.o.wobbleHeight - 0.01;
+        v.z = t.planeCur.position.z + (Math.sin(time/1000 + (i % t.o.segments))/2 + 1) * t.begin.curMult * t.o.wobbleHeight - 0.01;
       });
       // t.planeCur.geometry.vertices[4].z = 20;
       t.planeCur.geometry.verticesNeedUpdate = true;
@@ -128,3 +128,4 @@ var planeWobbleTransition = {
   }
 };
 
+TC.registerTransition(planeWobbleTransition);
