@@ -4,7 +4,6 @@
 var $b = $('body');
 var w = window;
 
-
 function TransController() {
   this.transitions = [];
   this.transitionMaps = [];
@@ -84,6 +83,52 @@ _.extend(TransMaster.prototype, {
     });
   },
 
+  _renderPageElements: function(page) {
+    var self = this;
+    var pageEl = page.el;
+    var $page = $(pageEl);
+
+    var $tempCont = $('<div class="trans-temp-container"></div>');
+    $tempCont.html($page.clone().get(0));
+    $tempCont.css('background', self._options.background);
+    $tempCont.children().show();
+
+    $b.append($tempCont);
+
+    function renderChildren(el) {
+      el.children().each(function() {
+        var $this = $(this);
+        this.myRect = this.getBoundingClientRect();
+
+        function backgroundColor(element) {
+          if (element.css('background-color') === 'rgba(0, 0, 0, 0)'){
+            return 'transparent';
+          }
+          return element.css('background-color');
+        }
+
+        if(backgroundColor($this) === 'transparent') {
+          this.style.backgroundColor = 'inherit';
+        }
+        html2canvas($this.get(0), {
+          onrendered: function(canvas) {
+            $this.get(0).myCanvas = canvas;
+            $this.get(0).myImg = canvas.toDataURL();
+          }
+        });
+        renderChildren($this);
+      });
+    }
+
+    renderChildren($tempCont);
+    page.domClone = $tempCont;
+
+    //Hackity hack
+    setTimeout(function() {
+      $tempCont.remove();
+    }, 10000);
+  },
+
   _init: function(options) {
     var o = options;
 
@@ -161,6 +206,12 @@ _.extend(TransMaster.prototype, {
         page.canvas = canvas;
         page.image = canvas.toDataURL('image/jpeg', 1.0);
       });
+
+      self._renderPageElements(page);
+
+      if (self._options.debug) {
+        window['pg' + page.name] = page;
+      }
     });
   },
 
@@ -170,7 +221,8 @@ _.extend(TransMaster.prototype, {
 
     //Set up transition options
     self._transitionTemp = {
-      o: self._transitions[transType].options
+      o: self._transitions[transType].options,
+      f: self._transitions[transType].gui
     };
 
     self._transitions[transType].beforeTransition.call(self, currentPage, nextPage, function(status) {
@@ -207,7 +259,8 @@ _.extend(TransMaster.prototype, {
 
     //Set up transition options
     self._transitionMapTemp = {
-      o: self._transitionMaps[transMapType].options
+      o: self._transitionMaps[transMapType].options,
+      f: self._transitionMaps[transMapType].gui
     };
 
     self._transitionMaps[transMapType].beforeTransitionMap.call(self, currentPage, pages, function(status) {
@@ -264,11 +317,12 @@ _.extend(TransMaster.prototype, {
 
   includeTransition: function(transition, options) {
     var transOptions = _.extend(transition.options, options);
+    var f;
 
     if (this._options.debug) {
       var g = this.gui;
 
-      var f = g.addFolder(transition.name);
+      f = g.addFolder(transition.name);
 
       _.each(transOptions, function(v, k) {
         f.add(transOptions, k);
@@ -277,6 +331,7 @@ _.extend(TransMaster.prototype, {
 
     this._transitions[transition.name] = {
       options: transOptions,
+      gui: f,
       beforeTransition: transition.beforeTransition,
       doTransition: transition.doTransition,
       afterTransition: transition.afterTransition
@@ -285,11 +340,12 @@ _.extend(TransMaster.prototype, {
 
   includeTransitionMap: function(transitionMap, options) {
     var transOptions = _.extend(transitionMap.options, options);
+    var f;
 
     if (this._options.debug) {
       var g = this.gui;
 
-      var f = g.addFolder(transitionMap.name);
+      f = g.addFolder(transitionMap.name);
 
       _.each(transOptions, function(v, k) {
         f.add(transOptions, k);
@@ -298,6 +354,7 @@ _.extend(TransMaster.prototype, {
 
     this._transitionMaps[transitionMap.name] = {
       options: transOptions,
+      gui: f,
       beforeTransitionMap: transitionMap.beforeTransitionMap,
       doTransitionMap: transitionMap.doTransitionMap,
       afterTransitionMap: transitionMap.afterTransitionMap

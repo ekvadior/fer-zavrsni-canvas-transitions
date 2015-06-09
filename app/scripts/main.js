@@ -2,7 +2,7 @@
 
 'use strict';
 var TM = new TransMaster({
-  transitionType: 'plane-wobble-transition',
+  transitionType: 'city-transition',
   pages: [
     {
       current: true,
@@ -35,3 +35,4 @@ $('body').on('click', '.js-map', function() {
 });
 
 window.tm = TM;
+
