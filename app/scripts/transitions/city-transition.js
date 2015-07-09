@@ -108,7 +108,7 @@ var cityTransition = {
     t.directionalLight = new THREE.DirectionalLight(t.o.directionalLight);
     t.directionalLight.position.set(500, 40, 1).normalize();
 
-    t.scene.add(t.box);
+    // t.scene.add(t.box);
     t.scene.add(t.ambientLight);
     t.scene.add(t.directionalLight);
 

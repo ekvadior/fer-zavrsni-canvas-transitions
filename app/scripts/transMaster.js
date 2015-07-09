@@ -184,11 +184,11 @@ _.extend(TransMaster.prototype, {
     this._transitionTemp = {};
     this._transitionMapTemp = {};
 
-    _.each(TC._getTransitions(), function(t) {
+    _.each(window.TC._getTransitions(), function(t) {
       self.includeTransition(t);
     });
 
-    _.each(TC._getTransitionMaps(), function(t) {
+    _.each(window.TC._getTransitionMaps(), function(t) {
       self.includeTransitionMap(t);
     });
 

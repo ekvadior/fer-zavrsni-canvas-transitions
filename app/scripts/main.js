@@ -2,7 +2,7 @@
 
 'use strict';
 var TM = new TransMaster({
-  transitionType: 'city-transition',
+  transitionType: 'plane-wobble-transition',
   pages: [
     {
       current: true,
